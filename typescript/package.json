@@ -1,0 +1,60 @@
+{
+  "name": "@superartifacts/sdk",
+  "version": "0.1.2",
+  "description": "The TypeScript SDK for the Super Artifacts REST API: publish artifacts, read their data, and manage projects, shares and templates from a server.",
+  "license": "MIT",
+  "type": "module",
+  "homepage": "https://superartifacts.app/docs/sdks/typescript",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Super-Artifacts/sdk.git",
+    "directory": "typescript"
+  },
+  "keywords": [
+    "superartifacts",
+    "super-artifacts",
+    "artifacts",
+    "sdk",
+    "api",
+    "rest",
+    "typescript"
+  ],
+  "engines": {
+    "node": ">=20.3.0"
+  },
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --target node20",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "tsup": "^9.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.0.5"
+  }
+}
