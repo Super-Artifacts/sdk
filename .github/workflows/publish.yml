@@ -1,0 +1,317 @@
+name: Publish
+
+# Becomes .github/workflows/publish.yml in the public repo, Super-Artifacts/sdk.
+# In that repo this file is a mirror: its source is sdks/publish.yml in the
+# maintainers' monorepo.
+#
+# **A release is a version that is not yet on the registry.** Nothing here reads
+# a tag or a release pull request: bump the version, and the next run publishes
+# it. The `plan` job asks both registries first, and a job with nothing to do is
+# skipped before it takes a runner, so a run with nothing owed is that one job.
+#
+# **This runs when asked, never on a push.** The mirror's force-pushes start no
+# `push` run here: one that changed typescript/, python/ and this file started
+# nothing on 2026-11-01. So the monorepo's sdk-mirror.yml dispatches this after
+# every push that changed something, and a person can dispatch it by hand.
+#
+# **A release is owed until its GitHub release exists,** because that is the last
+# thing a publish job writes. So a version that went live and then failed its
+# install check still counts, and any later run finishes it: the publish job skips
+# the publish and the remaining steps are idempotent.
+#
+# **The filename, `environment: pypi` and the job's `id-token: write` are what
+# PyPI's trusted publisher is registered against.** Rename the file or move the
+# job into a reusable workflow and the upload is refused. npm provenance needs a
+# public source repository, which is why publishing happens here and not in the
+# monorepo.
+#
+# **Each release's notes carry `spec-hash:`, the API it was built from.** The
+# monorepo's nightly (scripts/sdk/stale.mjs) reads that line to tell when the API
+# has moved past the newest release, so it stays one line of the notes.
+#
+# **actions/* follow their major tag, third-party actions a full commit SHA.**
+# GitHub's own actions share a trust root with the runner, so pinning them buys
+# nothing; astral-sh/setup-uv runs beside a publishing identity and is not ours.
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Run both publish jobs even if nothing is owed. A live version is still not republished.
+        type: boolean
+        default: false
+
+permissions: {}
+
+# Queued, never cancelled: a publish stopped halfway is the one state that needs
+# a person.
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: is a release owed?
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      npm: ${{ steps.plan.outputs.npm }}
+      pypi: ${{ steps.plan.outputs.pypi }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Ask both registries
+        id: plan
+        env:
+          FORCE: ${{ inputs.force }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # An outage stops the run. Reading it as "owed" starts a publish on a
+          # guess, and reading it as "live" drops a release in silence.
+          if ! releases=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].tag_name'); then
+            echo "::error::could not list the releases of $GITHUB_REPOSITORY"
+            exit 1
+          fi
+          plan() {
+            local output=$1 package=$2 url=$3 tag=$4 status owed
+            status=$(curl --silent --max-time 30 --output /dev/null --write-out '%{http_code}' "$url" || true)
+            case "$status" in
+              200)
+                if grep -qxF "$tag" <<<"$releases"; then
+                  owed=false
+                  echo "$package is live and released as $tag"
+                else
+                  owed=true
+                  echo "$package is live but $tag is missing: finishing the release"
+                fi
+                ;;
+              404)
+                owed=true
+                echo "$package is not live: publishing it"
+                ;;
+              *)
+                echo "::error::$url answered $status"
+                exit 1
+                ;;
+            esac
+            if [ "$FORCE" = true ]; then owed=true; fi
+            echo "$output=$owed" >> "$GITHUB_OUTPUT"
+          }
+          typescript=$(node -p "require('./typescript/package.json').version")
+          python=$(sed -n 's/^version = "\(.*\)"$/\1/p' python/pyproject.toml | head -n 1)
+          if [ -z "$typescript" ] || [ -z "$python" ]; then
+            echo "::error::could not read a version from both packages"
+            exit 1
+          fi
+          plan npm "@superartifacts/sdk@$typescript" "https://registry.npmjs.org/@superartifacts/sdk/$typescript" "typescript-v$typescript"
+          plan pypi "superartifacts $python" "https://pypi.org/pypi/superartifacts/$python/json" "python-v$python"
+
+  test:
+    name: build and test both packages
+    needs: plan
+    if: needs.plan.outputs.npm == 'true' || needs.plan.outputs.pypi == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: '3.12'
+          # Nothing shared between runs reaches a job that can publish, and a
+          # skipped release leaves no cache to save, which fails the post step.
+          enable-cache: false
+      - name: TypeScript
+        working-directory: typescript
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npm run typecheck
+          npm run build
+          npm test
+      - name: Python
+        working-directory: python
+        run: |
+          set -euo pipefail
+          uv run pytest
+          uv build
+
+  npm:
+    name: publish @superartifacts/sdk to npm
+    needs: [plan, test]
+    if: needs.plan.outputs.npm == 'true'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: write
+      id-token: write
+    defaults:
+      run:
+        working-directory: typescript
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      # `plan` said a release is owed, which may be only its verify and its tag.
+      # A live version skips Build and Publish; the later steps still run.
+      - name: Is this version live?
+        id: version
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # A missing version exits 1 on one npm and prints nothing on another,
+          # so the answer is the output. An outage reads as "not live", and the
+          # registry then refuses the duplicate: the safe way round.
+          live=$(npm view "@superartifacts/sdk@$version" version 2>/dev/null || true)
+          if [ "$live" = "$version" ]; then
+            echo "@superartifacts/sdk@$version is already live; nothing to publish"
+            echo "live=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "live=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build
+        if: steps.version.outputs.live != 'true'
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npm run build
+      - name: Publish
+        if: steps.version.outputs.live != 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public
+      - name: Install it from the registry
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd "$(mktemp -d)"
+          npm init --yes >/dev/null
+          # The registry's CDN can lag a publish by a minute or two.
+          for attempt in $(seq 1 30); do
+            if npm install --no-audit --no-fund "@superartifacts/sdk@$VERSION"; then break; fi
+            if [ "$attempt" = 30 ]; then
+              echo "::error::@superartifacts/sdk@$VERSION did not become installable"
+              exit 1
+            fi
+            sleep 20
+          done
+          node --input-type=module -e '
+            import { SuperArtifacts, VERSION } from "@superartifacts/sdk"
+            if (VERSION !== process.env.VERSION || typeof SuperArtifacts !== "function") {
+              throw new Error(`installed ${VERSION}, expected ${process.env.VERSION}`)
+            }
+          '
+          node -e 'require("@superartifacts/sdk").SuperArtifacts.name'
+          echo "@superartifacts/sdk@$VERSION installs and imports"
+      - name: Tag the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: typescript-v${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG already exists"
+          else
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" \
+              --notes "@superartifacts/sdk $VERSION on npm: https://www.npmjs.com/package/@superartifacts/sdk/v/$VERSION
+
+          spec-hash: $(cat ../.spec-hash)"
+          fi
+
+  pypi:
+    name: publish superartifacts to PyPI
+    needs: [plan, test]
+    if: needs.plan.outputs.pypi == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: write
+      id-token: write
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: '3.12'
+          # Nothing shared between runs reaches a job that can publish, and a
+          # skipped release leaves no cache to save, which fails the post step.
+          enable-cache: false
+      # `plan` said a release is owed, which may be only its verify and its tag.
+      # A live version skips Build and Publish; the later steps still run.
+      - name: Is this version live?
+        id: version
+        run: |
+          set -euo pipefail
+          version=$(uv version --short)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' "https://pypi.org/pypi/superartifacts/$version/json")
+          case "$status" in
+            200)
+              echo "superartifacts $version is already live; nothing to publish"
+              echo "live=true" >> "$GITHUB_OUTPUT"
+              ;;
+            404) echo "live=false" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "::error::pypi.org answered $status for superartifacts $version"
+              exit 1
+              ;;
+          esac
+      - name: Build
+        if: steps.version.outputs.live != 'true'
+        run: uv build
+      # No token: PyPI exchanges this job's OIDC identity for an upload credential.
+      - name: Publish
+        if: steps.version.outputs.live != 'true'
+        run: uv publish --trusted-publishing always
+      - name: Install it from the registry
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd "$(mktemp -d)"
+          probe='import os, superartifacts as sa; assert sa.__version__ == os.environ["VERSION"], sa.__version__'
+          # PyPI's index can lag an upload by a minute or two.
+          for attempt in $(seq 1 30); do
+            if uv run --isolated --no-project --refresh --with "superartifacts==$VERSION" python -c "$probe"; then break; fi
+            if [ "$attempt" = 30 ]; then
+              echo "::error::superartifacts $VERSION did not become installable"
+              exit 1
+            fi
+            sleep 20
+          done
+          echo "superartifacts $VERSION installs and imports"
+      - name: Tag the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: python-v${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG already exists"
+          else
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" \
+              --notes "superartifacts $VERSION on PyPI: https://pypi.org/project/superartifacts/$VERSION/
+
+          spec-hash: $(cat ../.spec-hash)"
+          fi

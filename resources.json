@@ -1,0 +1,196 @@
+{
+  "whoami": {
+    "resource": "account",
+    "method": "whoami"
+  },
+  "getHelp": {
+    "resource": "account",
+    "method": "help"
+  },
+  "listArtifacts": {
+    "resource": "artifacts",
+    "method": "list"
+  },
+  "publishArtifact": {
+    "resource": "artifacts",
+    "method": "publish"
+  },
+  "getArtifact": {
+    "resource": "artifacts",
+    "method": "get"
+  },
+  "updateArtifact": {
+    "resource": "artifacts",
+    "method": "update"
+  },
+  "deleteArtifact": {
+    "resource": "artifacts",
+    "method": "delete"
+  },
+  "readArtifactFile": {
+    "resource": "artifacts",
+    "method": "readFile"
+  },
+  "openArtifact": {
+    "resource": "artifacts",
+    "method": "open"
+  },
+  "serveVersion": {
+    "resource": "artifacts",
+    "method": "serveVersion"
+  },
+  "startLiveRoom": {
+    "resource": "live",
+    "method": "start"
+  },
+  "stopLiveRoom": {
+    "resource": "live",
+    "method": "stop"
+  },
+  "stageUploads": {
+    "resource": "uploads",
+    "method": "stage"
+  },
+  "listArtifactRows": {
+    "resource": "data",
+    "method": "listArtifactRows"
+  },
+  "writeArtifactRows": {
+    "resource": "data",
+    "method": "writeArtifactRows"
+  },
+  "listRows": {
+    "resource": "data",
+    "method": "listRows"
+  },
+  "queryData": {
+    "resource": "data",
+    "method": "query"
+  },
+  "getSchema": {
+    "resource": "schema",
+    "method": "get"
+  },
+  "defineCollection": {
+    "resource": "schema",
+    "method": "defineCollection"
+  },
+  "listEntries": {
+    "resource": "entries",
+    "method": "list",
+    "conditionalRead": true
+  },
+  "createEntries": {
+    "resource": "entries",
+    "method": "create"
+  },
+  "useSecret": {
+    "resource": "secrets",
+    "method": "use"
+  },
+  "listTemplates": {
+    "resource": "templates",
+    "method": "list"
+  },
+  "saveTemplate": {
+    "resource": "templates",
+    "method": "save"
+  },
+  "getTemplate": {
+    "resource": "templates",
+    "method": "get"
+  },
+  "getTemplateHistory": {
+    "resource": "templates",
+    "method": "getHistory"
+  },
+  "getTemplateFeedback": {
+    "resource": "templates",
+    "method": "getFeedback"
+  },
+  "actOnTemplate": {
+    "resource": "templates",
+    "method": "act"
+  },
+  "releaseTemplate": {
+    "resource": "templates",
+    "method": "release"
+  },
+  "listProjects": {
+    "resource": "projects",
+    "method": "list"
+  },
+  "createProject": {
+    "resource": "projects",
+    "method": "create"
+  },
+  "getProject": {
+    "resource": "projects",
+    "method": "get"
+  },
+  "updateProject": {
+    "resource": "projects",
+    "method": "update"
+  },
+  "deleteProject": {
+    "resource": "projects",
+    "method": "delete"
+  },
+  "addProjectArtifacts": {
+    "resource": "projects",
+    "method": "addArtifacts"
+  },
+  "removeProjectArtifact": {
+    "resource": "projects",
+    "method": "removeArtifact"
+  },
+  "shareArtifact": {
+    "resource": "shares",
+    "method": "addToArtifact"
+  },
+  "shareProject": {
+    "resource": "shares",
+    "method": "addToProject"
+  },
+  "shareWorkspace": {
+    "resource": "shares",
+    "method": "addToWorkspace"
+  },
+  "listComments": {
+    "resource": "comments",
+    "method": "list"
+  },
+  "respondToComments": {
+    "$comment": "Rows support messageId and atomic body + resolve: true; outcomes report replied/resolved separately.",
+    "resource": "comments",
+    "method": "respond"
+  },
+  "getCommentScreenshot": {
+    "resource": "comments",
+    "method": "getScreenshot"
+  },
+  "listMentions": {
+    "resource": "mentions",
+    "method": "list"
+  },
+  "listSignatureRequests": {
+    "resource": "signatures",
+    "method": "list"
+  },
+  "requestSignatures": {
+    "resource": "signatures",
+    "method": "request"
+  },
+  "getSignatureRequest": {
+    "resource": "signatures",
+    "method": "get"
+  },
+  "remindSigner": {
+    "resource": "signatures",
+    "method": "remind"
+  },
+  "withdrawSignatureRequest": {
+    "resource": "signatures",
+    "method": "withdraw"
+  }
+}
