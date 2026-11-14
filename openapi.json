@@ -1,0 +1,4492 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Super Artifacts REST API",
+    "version": "1.0.0",
+    "description": "Publish, read and share artifacts, and read and write their data, with an account key. Each operation is one MCP tool call: the same limits, errors and permissions. Errors are `{error: {code, message}}`; `code` is stable."
+  },
+  "servers": [
+    {
+      "url": "https://superartifacts.app"
+    }
+  ],
+  "security": [
+    {
+      "bearer": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Account"
+    },
+    {
+      "name": "Webhooks"
+    },
+    {
+      "name": "Artifacts"
+    },
+    {
+      "name": "Data"
+    },
+    {
+      "name": "Collections"
+    },
+    {
+      "name": "Templates"
+    },
+    {
+      "name": "Projects"
+    },
+    {
+      "name": "Sharing"
+    },
+    {
+      "name": "Comments"
+    },
+    {
+      "name": "Signatures"
+    }
+  ],
+  "paths": {
+    "/v1/whoami": {
+      "get": {
+        "operationId": "whoami",
+        "summary": "Who this key publishes as",
+        "description": "Who this key publishes as: the workspace `handle`, `email`, `agent` name and `scope` (the artifacts it may change: its own, and those it is named Editor on), plus `liveRooms` where live rooms run (the limit and who holds one). Useful to confirm where a publish lands, or why an artifact answers `not_found`; no other tool needs it.",
+        "tags": [
+          "Account"
+        ],
+        "x-mcp-tool": "super_whoami",
+        "responses": {
+          "200": {
+            "description": "Who this key publishes as",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/help": {
+      "get": {
+        "operationId": "getHelp",
+        "summary": "How the operations fit together",
+        "description": "Plain-text notes for when it is unclear which tool, data store or argument shape does a job. Topics: `tools` (a line per tool), `data` (which store a page needs and how the page writes to it), `templates` (finding, building from, drafting, releasing), `collections` (content models and field types), `projects` (creating, ordering, sharing, rules), `batch` (what each tool takes in one call). Without `topic`: the full topic list, which names two more reached from results. Answers `{topic, text}`; not needed when a tool’s own description answers the question.",
+        "tags": [
+          "Account"
+        ],
+        "x-mcp-tool": "super_help",
+        "parameters": [
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "tools",
+                "data",
+                "templates",
+                "collections",
+                "projects",
+                "batch"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "How the operations fit together",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/webhooks": {
+      "get": {
+        "operationId": "listWebhookEndpoints",
+        "summary": "List account webhook endpoints",
+        "description": "Manage this account’s webhook endpoints. create and rotate return the signing secret once; delete permanently removes an endpoint and its delivery history. Mutations require write scope. agent: \"me\" selects the calling key’s agent (no_agent if absent); a handle must be owned. messages returns the newest 100, optionally filtered by endpoint id and sinceMinutes (1–43200). Declare artifact triggers through super_publish.",
+        "tags": [
+          "Webhooks"
+        ],
+        "x-mcp-tool": "super_webhooks",
+        "parameters": [
+          {
+            "name": "agent",
+            "in": "query",
+            "required": false,
+            "description": "On create or list: me, or an owned agent handle.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List account webhook endpoints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createWebhookEndpoint",
+        "summary": "Create an endpoint; returns its signing secret once",
+        "description": "Manage this account’s webhook endpoints. create and rotate return the signing secret once; delete permanently removes an endpoint and its delivery history. Mutations require write scope. agent: \"me\" selects the calling key’s agent (no_agent if absent); a handle must be owned. messages returns the newest 100, optionally filtered by endpoint id and sinceMinutes (1–43200). Declare artifact triggers through super_publish.",
+        "tags": [
+          "Webhooks"
+        ],
+        "x-mcp-tool": "super_webhooks",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "maxLength": 2048
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "eventTypes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "agent": {
+                    "type": "string",
+                    "description": "On create or list: me, or an owned agent handle."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Create an endpoint; returns its signing secret once",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/webhooks/{id}": {
+      "get": {
+        "operationId": "getWebhookEndpoint",
+        "summary": "Read an owned endpoint",
+        "description": "Manage this account’s webhook endpoints. create and rotate return the signing secret once; delete permanently removes an endpoint and its delivery history. Mutations require write scope. agent: \"me\" selects the calling key’s agent (no_agent if absent); a handle must be owned. messages returns the newest 100, optionally filtered by endpoint id and sinceMinutes (1–43200). Declare artifact triggers through super_publish.",
+        "tags": [
+          "Webhooks"
+        ],
+        "x-mcp-tool": "super_webhooks",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read an owned endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteWebhookEndpoint",
+        "summary": "Delete an endpoint and its history",
+        "description": "Manage this account’s webhook endpoints. create and rotate return the signing secret once; delete permanently removes an endpoint and its delivery history. Mutations require write scope. agent: \"me\" selects the calling key’s agent (no_agent if absent); a handle must be owned. messages returns the newest 100, optionally filtered by endpoint id and sinceMinutes (1–43200). Declare artifact triggers through super_publish.",
+        "tags": [
+          "Webhooks"
+        ],
+        "x-mcp-tool": "super_webhooks",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delete an endpoint and its history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/webhooks/{id}/test": {
+      "post": {
+        "operationId": "testWebhookEndpoint",
+        "summary": "Send a signed webhook.test",
+        "description": "Manage this account’s webhook endpoints. create and rotate return the signing secret once; delete permanently removes an endpoint and its delivery history. Mutations require write scope. agent: \"me\" selects the calling key’s agent (no_agent if absent); a handle must be owned. messages returns the newest 100, optionally filtered by endpoint id and sinceMinutes (1–43200). Declare artifact triggers through super_publish.",
+        "tags": [
+          "Webhooks"
+        ],
+        "x-mcp-tool": "super_webhooks",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Send a signed webhook.test",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/webhooks/{id}/rotate": {
+      "post": {
+        "operationId": "rotateWebhookSecret",
+        "summary": "Rotate the signing secret; returns it once",
+        "description": "Manage this account’s webhook endpoints. create and rotate return the signing secret once; delete permanently removes an endpoint and its delivery history. Mutations require write scope. agent: \"me\" selects the calling key’s agent (no_agent if absent); a handle must be owned. messages returns the newest 100, optionally filtered by endpoint id and sinceMinutes (1–43200). Declare artifact triggers through super_publish.",
+        "tags": [
+          "Webhooks"
+        ],
+        "x-mcp-tool": "super_webhooks",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rotate the signing secret; returns it once",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/webhook-messages": {
+      "get": {
+        "operationId": "listWebhookMessages",
+        "summary": "Read the newest 100 webhook messages",
+        "description": "Manage this account’s webhook endpoints. create and rotate return the signing secret once; delete permanently removes an endpoint and its delivery history. Mutations require write scope. agent: \"me\" selects the calling key’s agent (no_agent if absent); a handle must be owned. messages returns the newest 100, optionally filtered by endpoint id and sinceMinutes (1–43200). Declare artifact triggers through super_publish.",
+        "tags": [
+          "Webhooks"
+        ],
+        "x-mcp-tool": "super_webhooks",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sinceMinutes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 43200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read the newest 100 webhook messages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/artifacts": {
+      "get": {
+        "operationId": "listArtifacts",
+        "summary": "List your artifacts, newest first",
+        "description": "Without `artifact`: your artifacts, newest first, with URLs and `live`. With `artifact`: its versions, which is published, their paths, and `declaration` (the published policy). Add `path` or `version` to read that file as text (default: published index.html); non-text or over 300,000 bytes: refused. `open: true` (with `artifact`, optional `version`) returns `url` and `expiresAt`: load `url` to see the artifact as a viewer, private included, for 10 minutes; visibility is unchanged, the URL opens only that artifact, 60/key/hour (`rate_limited`). Changing what an artifact serves, or who can open it, is super_artifact_set.",
+        "tags": [
+          "Artifacts"
+        ],
+        "x-mcp-tool": "super_artifacts",
+        "responses": {
+          "200": {
+            "description": "List your artifacts, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "publishArtifact",
+        "summary": "Publish an artifact, or a new version of one",
+        "description": "Publish a page at a stable URL; the same slug adds a new version, which the URL serves at once. Earlier versions stay and can be served again; nothing that existed before the call is deleted. Always give the person the url from the result, even on updates. Send `html`, or `values` for a template that carries a runtime, not both. Without `policy` a form, input or saved state stores nothing; CMS rows a page edits go in `policy.collections`. When retained storage is full it refuses with `plan_limit` and deletes nothing. A template becomes everybody’s through a release, not a publish.",
+        "tags": [
+          "Artifacts"
+        ],
+        "x-mcp-tool": "super_publish",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "description": "Kebab-case, 3–63 chars, under your key’s handle: it updates one there you are Editor on. Another workspace’s artifact: publish from its dashboard."
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "Optional: the request it answers, on its card."
+                  },
+                  "html": {
+                    "type": "string",
+                    "description": "Complete self-contained index.html."
+                  },
+                  "values": {
+                    "type": "object",
+                    "description": "Filled slots for `template`'s runtime, by slot name; `json` slots are schema-checked."
+                  },
+                  "instances": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "description": "Instead of `slug`/`values`: several pages of one `template`.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "slug": {
+                          "type": "string"
+                        },
+                        "values": {
+                          "type": "object"
+                        },
+                        "title": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "slug",
+                        "values"
+                      ]
+                    }
+                  },
+                  "template": {
+                    "type": "object",
+                    "description": "The template built from (provenance); required with `values` or `instances`.",
+                    "properties": {
+                      "slug": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    },
+                    "required": [
+                      "slug"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Under 60 chars. Default: page <title>."
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Link-preview sentence, under 200 chars. Default: `prompt`."
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "page",
+                      "slideshow",
+                      "survey",
+                      "tracker",
+                      "video",
+                      "tool",
+                      "dashboard"
+                    ],
+                    "description": "Default `page`. `dashboard` labels a page of mostly live data."
+                  },
+                  "collection": {
+                    "type": "string",
+                    "description": "Gallery grouping label, not a content collection."
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "private",
+                      "organization"
+                    ],
+                    "description": "From version 1. Default: the workspace default; public is set after."
+                  },
+                  "policy": {
+                    "type": "object",
+                    "description": "Data policy v1. Visitors submit to a sheet (perUser single, upsert, a field per question), a log (many, append-only) or a shared doc (shared, key). CMS rows: `collections`. See super_help data."
+                  },
+                  "triggers": {
+                    "type": "array",
+                    "maxItems": 8,
+                    "items": {
+                      "type": "object"
+                    },
+                    "description": "Declared agent triggers: key, prompt, optional label, on, who, agent, input, when, once. At most 8 and 12 KiB; omitted on redeploy keeps the previous set."
+                  },
+                  "dataset": {
+                    "type": "string",
+                    "description": "With `values`: overrides the declaration's `dataset.key`."
+                  },
+                  "continues": {
+                    "type": "string",
+                    "description": "With `values`: the dataset key this one succeeds."
+                  },
+                  "uploads": {
+                    "type": "string",
+                    "description": "uploadId from super_upload; its files ship with the page."
+                  },
+                  "valuesFile": {
+                    "type": "string",
+                    "description": "With `uploads`: the staged JSON file to read `values` from."
+                  },
+                  "files": {
+                    "type": "array",
+                    "description": "With `html`: small assets. ≤200, 5 MiB each, 10 MiB total, decoded.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "description": "Relative, no leading slash."
+                        },
+                        "content": {
+                          "type": "string",
+                          "description": "Base64 of the bytes."
+                        },
+                        "contentType": {
+                          "type": "string",
+                          "description": "Default: from the extension."
+                        },
+                        "sha256": {
+                          "type": "string",
+                          "description": "Hex digest of the decoded bytes."
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "content"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "slug"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Publish an artifact, or a new version of one",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/artifacts/{artifact}": {
+      "get": {
+        "operationId": "getArtifact",
+        "summary": "One artifact: its versions, published version and declaration",
+        "description": "Without `artifact`: your artifacts, newest first, with URLs and `live`. With `artifact`: its versions, which is published, their paths, and `declaration` (the published policy). Add `path` or `version` to read that file as text (default: published index.html); non-text or over 300,000 bytes: refused. `open: true` (with `artifact`, optional `version`) returns `url` and `expiresAt`: load `url` to see the artifact as a viewer, private included, for 10 minutes; visibility is unchanged, the URL opens only that artifact, 60/key/hour (`rate_limited`). Changing what an artifact serves, or who can open it, is super_artifact_set.",
+        "tags": [
+          "Artifacts"
+        ],
+        "x-mcp-tool": "super_artifacts",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One artifact: its versions, published version and declaration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateArtifact",
+        "summary": "Change visibility, gallery label, live phase or submission email",
+        "description": "Change one artifact. `version` serves an existing version (a pointer move; nothing rebuilt or deleted). `live` turns its live room on or off; off disconnects every visitor, and Free has one room at a time. `triggersEnabled` is the owner’s kill switch for declared triggers (default on). `notifyOnSubmission` emails you for each new data submission (default off; edits send nothing; no answers in the mail). `phase` sets the live room’s phase. `visibility` widens or narrows who can open it; narrowing voids every viewer grant already issued, so each viewer is checked again. `collection` sets its gallery grouping label. `delete` removes the artifact with every version, share link and response, permanently; it needs `confirm: true` and goes alone. Fields apply in that order, and a refusal part-way names the ones already `applied`. Publishing a new version is super_publish.",
+        "tags": [
+          "Artifacts"
+        ],
+        "x-mcp-tool": "super_artifact_set",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "private",
+                      "organization",
+                      "public"
+                    ],
+                    "description": "private: Restricted (default). organization: anyone at the workspace. public: anyone with the link."
+                  },
+                  "collection": {
+                    "type": "string",
+                    "description": "Gallery grouping label, ≤ 60 chars. Empty clears it."
+                  },
+                  "phase": {
+                    "type": "string",
+                    "description": "The name a stream’s `revealAt` waits for; from then on that stream reads as public."
+                  },
+                  "notifyOnSubmission": {
+                    "type": "boolean"
+                  },
+                  "triggersEnabled": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Change visibility, gallery label, live phase or submission email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteArtifact",
+        "summary": "Delete an artifact with every version, permanently",
+        "description": "Change one artifact. `version` serves an existing version (a pointer move; nothing rebuilt or deleted). `live` turns its live room on or off; off disconnects every visitor, and Free has one room at a time. `triggersEnabled` is the owner’s kill switch for declared triggers (default on). `notifyOnSubmission` emails you for each new data submission (default off; edits send nothing; no answers in the mail). `phase` sets the live room’s phase. `visibility` widens or narrows who can open it; narrowing voids every viewer grant already issued, so each viewer is checked again. `collection` sets its gallery grouping label. `delete` removes the artifact with every version, share link and response, permanently; it needs `confirm: true` and goes alone. Fields apply in that order, and a refusal part-way names the ones already `applied`. Publishing a new version is super_publish.",
+        "tags": [
+          "Artifacts"
+        ],
+        "x-mcp-tool": "super_artifact_set",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "confirm",
+            "in": "query",
+            "required": true,
+            "description": "Repeat the artifact: deleting is permanent.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delete an artifact with every version, permanently",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/artifacts/{artifact}/file": {
+      "get": {
+        "operationId": "readArtifactFile",
+        "summary": "Read one file of a version as text (default: the published index.html)",
+        "description": "Without `artifact`: your artifacts, newest first, with URLs and `live`. With `artifact`: its versions, which is published, their paths, and `declaration` (the published policy). Add `path` or `version` to read that file as text (default: published index.html); non-text or over 300,000 bytes: refused. `open: true` (with `artifact`, optional `version`) returns `url` and `expiresAt`: load `url` to see the artifact as a viewer, private included, for 10 minutes; visibility is unchanged, the URL opens only that artifact, 60/key/hour (`rate_limited`). Changing what an artifact serves, or who can open it, is super_artifact_set.",
+        "tags": [
+          "Artifacts"
+        ],
+        "x-mcp-tool": "super_artifacts",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read one file of a version as text (default: the published index.html)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/artifacts/{artifact}/open": {
+      "post": {
+        "operationId": "openArtifact",
+        "summary": "A ten-minute viewer URL for an artifact, private included",
+        "description": "Without `artifact`: your artifacts, newest first, with URLs and `live`. With `artifact`: its versions, which is published, their paths, and `declaration` (the published policy). Add `path` or `version` to read that file as text (default: published index.html); non-text or over 300,000 bytes: refused. `open: true` (with `artifact`, optional `version`) returns `url` and `expiresAt`: load `url` to see the artifact as a viewer, private included, for 10 minutes; visibility is unchanged, the URL opens only that artifact, 60/key/hour (`rate_limited`). Changing what an artifact serves, or who can open it, is super_artifact_set.",
+        "tags": [
+          "Artifacts"
+        ],
+        "x-mcp-tool": "super_artifacts",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A ten-minute viewer URL for an artifact, private included",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/artifacts/{artifact}/versions/{version}/serve": {
+      "post": {
+        "operationId": "serveVersion",
+        "summary": "Serve an existing version again",
+        "description": "Change one artifact. `version` serves an existing version (a pointer move; nothing rebuilt or deleted). `live` turns its live room on or off; off disconnects every visitor, and Free has one room at a time. `triggersEnabled` is the owner’s kill switch for declared triggers (default on). `notifyOnSubmission` emails you for each new data submission (default off; edits send nothing; no answers in the mail). `phase` sets the live room’s phase. `visibility` widens or narrows who can open it; narrowing voids every viewer grant already issued, so each viewer is checked again. `collection` sets its gallery grouping label. `delete` removes the artifact with every version, share link and response, permanently; it needs `confirm: true` and goes alone. Fields apply in that order, and a refusal part-way names the ones already `applied`. Publishing a new version is super_publish.",
+        "tags": [
+          "Artifacts"
+        ],
+        "x-mcp-tool": "super_artifact_set",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Serve an existing version again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/artifacts/{artifact}/live": {
+      "post": {
+        "operationId": "startLiveRoom",
+        "summary": "Turn an artifact's live room on",
+        "description": "Change one artifact. `version` serves an existing version (a pointer move; nothing rebuilt or deleted). `live` turns its live room on or off; off disconnects every visitor, and Free has one room at a time. `triggersEnabled` is the owner’s kill switch for declared triggers (default on). `notifyOnSubmission` emails you for each new data submission (default off; edits send nothing; no answers in the mail). `phase` sets the live room’s phase. `visibility` widens or narrows who can open it; narrowing voids every viewer grant already issued, so each viewer is checked again. `collection` sets its gallery grouping label. `delete` removes the artifact with every version, share link and response, permanently; it needs `confirm: true` and goes alone. Fields apply in that order, and a refusal part-way names the ones already `applied`. Publishing a new version is super_publish.",
+        "tags": [
+          "Artifacts"
+        ],
+        "x-mcp-tool": "super_artifact_set",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Turn an artifact's live room on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "stopLiveRoom",
+        "summary": "Turn an artifact's live room off, disconnecting every visitor",
+        "description": "Change one artifact. `version` serves an existing version (a pointer move; nothing rebuilt or deleted). `live` turns its live room on or off; off disconnects every visitor, and Free has one room at a time. `triggersEnabled` is the owner’s kill switch for declared triggers (default on). `notifyOnSubmission` emails you for each new data submission (default off; edits send nothing; no answers in the mail). `phase` sets the live room’s phase. `visibility` widens or narrows who can open it; narrowing voids every viewer grant already issued, so each viewer is checked again. `collection` sets its gallery grouping label. `delete` removes the artifact with every version, share link and response, permanently; it needs `confirm: true` and goes alone. Fields apply in that order, and a refusal part-way names the ones already `applied`. Publishing a new version is super_publish.",
+        "tags": [
+          "Artifacts"
+        ],
+        "x-mcp-tool": "super_artifact_set",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Turn an artifact's live room off, disconnecting every visitor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/uploads": {
+      "post": {
+        "operationId": "stageUploads",
+        "summary": "Stage big files for a publish; PUT each to its URL",
+        "description": "Stage images, video or big files for a publish without sending their bytes in a call. Declare each file’s `path` and exact `bytes`; the result carries an `uploadId` and one `url` per file. PUT each file to its URL (`curl -T`, no credentials), then super_publish with `uploads`. Not index.html: that is `html`; small assets can ride inline as the publish’s `files`. Same limits as `files`; a staged set expires after 30 minutes, and at most 5 wait unpublished at once.",
+        "tags": [
+          "Artifacts"
+        ],
+        "x-mcp-tool": "super_upload",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "Exact size."
+                        },
+                        "sha256": {
+                          "type": "string",
+                          "description": "Hex; checked on upload."
+                        },
+                        "contentType": {
+                          "type": "string",
+                          "description": "Default: from the extension."
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "bytes"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "files"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stage big files for a publish; PUT each to its URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/artifacts/{artifact}/data": {
+      "get": {
+        "operationId": "listArtifactRows",
+        "summary": "Rows visitors submitted to one artifact, newest first",
+        "description": "The rows visitors submitted to your artifacts, newest first, with each version's field schema; paged by `cursor`. Address exactly one: `artifact`; `dataset` (a catalog key; one shared by several artifacts is `ambiguous_dataset`); or `collection`, the gallery grouping label set at publish, not a content collection (≤20 artifacts over one window, kept per artifact, no `filter`). Entries of a content collection are super_entries; totals and averages are a query, not a read.",
+        "tags": [
+          "Data"
+        ],
+        "x-mcp-tool": "super_data",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "description": "ANDed 'field op value' clauses: 'reps >= 5', 'day in mon,tue', 'note is set'. Ops: = != > >= < <= contains in, is set, is unset. System: _version _at _status _visitor.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 8
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "description": "ISO-8601 instant or window (7d, 24h). Or a version (v2) when addressing one artifact.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "By collection time.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Per artifact. Default 50.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "The previous cursor.next.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rows visitors submitted to one artifact, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/artifacts/{artifact}/data/rows": {
+      "post": {
+        "operationId": "writeArtifactRows",
+        "summary": "Write rows into an artifact you may edit",
+        "description": "Write rows into an artifact this key may edit, through the validation and stream rules a page write gets; each row is attributed \"<agent> (agent)\". `rows` creates in `stream`. `ops` [{op: create|replace|delete, id, row, stream}] replaces or deletes only rows this agent wrote (writes: upsert); a deleted row cannot be restored by any tool. ≤50 a call; `atomic`: all or none, otherwise a partial batch answers `complete: false`. Visitor rows are never changed here; entries of a content collection are super_entries.",
+        "tags": [
+          "Data"
+        ],
+        "x-mcp-tool": "super_data_write",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "stream": {
+                    "type": "string"
+                  },
+                  "rows": {
+                    "type": "array",
+                    "maxItems": 50,
+                    "items": {
+                      "type": "object"
+                    }
+                  },
+                  "ops": {
+                    "type": "array",
+                    "maxItems": 50,
+                    "items": {
+                      "type": "object"
+                    }
+                  },
+                  "atomic": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Write rows into an artifact you may edit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/data": {
+      "get": {
+        "operationId": "listRows",
+        "summary": "Rows submitted to a dataset or a gallery label",
+        "description": "The rows visitors submitted to your artifacts, newest first, with each version's field schema; paged by `cursor`. Address exactly one: `artifact`; `dataset` (a catalog key; one shared by several artifacts is `ambiguous_dataset`); or `collection`, the gallery grouping label set at publish, not a content collection (≤20 artifacts over one window, kept per artifact, no `filter`). Entries of a content collection are super_entries; totals and averages are a query, not a read.",
+        "tags": [
+          "Data"
+        ],
+        "x-mcp-tool": "super_data",
+        "parameters": [
+          {
+            "name": "dataset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "collection",
+            "in": "query",
+            "required": false,
+            "description": "The gallery grouping label set at publish, case-sensitive. Not a content collection.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "description": "ANDed 'field op value' clauses: 'reps >= 5', 'day in mon,tue', 'note is set'. Ops: = != > >= < <= contains in, is set, is unset. System: _version _at _status _visitor.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 8
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "description": "ISO-8601 instant or window (7d, 24h). Or a version (v2) when addressing one artifact.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "By collection time.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Per artifact. Default 50.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "The previous cursor.next.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rows submitted to a dataset or a gallery label",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/data/query": {
+      "post": {
+        "operationId": "queryData",
+        "summary": "Aggregate what was collected: numbers, never rows",
+        "description": "Numbers over what was collected, never rows (rows are super_data). Aggregate `measures` across the datasets in `scope`; datasets combine on the same measure in one base unit, results in the declared `unit`. Names come from the catalog; an unknown one errors with near misses. The answer has one row per `group_by` key (or one row) with a column per measure and `compute`, the datasets used and any skipped, and `truncated` when `limit` cut it. Or send `distributions` for one artifact: counts, per-version rates and per-field distributions (free text: answer rate and length only). A call with neither is `invalid_query`.",
+        "tags": [
+          "Data"
+        ],
+        "x-mcp-tool": "super_data_query",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "type": "object",
+                    "description": "The union of the forms given.",
+                    "properties": {
+                      "series": {
+                        "type": "string"
+                      },
+                      "datasets": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "maxItems": 20
+                      },
+                      "tags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "All must match."
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "measures": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "maxItems": 6,
+                    "description": "Catalog measure names, not field names."
+                  },
+                  "agg": {
+                    "type": "string",
+                    "enum": [
+                      "sum",
+                      "avg",
+                      "min",
+                      "max",
+                      "count",
+                      "last"
+                    ]
+                  },
+                  "compute": {
+                    "type": "array",
+                    "maxItems": 4,
+                    "description": "Derived columns, in order; operands name a measure or an earlier `as`.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "as": {
+                          "type": "string"
+                        },
+                        "expr": {
+                          "type": "string",
+                          "enum": [
+                            "a * b",
+                            "a / b",
+                            "a + b"
+                          ]
+                        },
+                        "operands": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        },
+                        "unit": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "as",
+                        "expr",
+                        "operands"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "filter": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "maxItems": 8,
+                    "description": "ANDed 'field op value' clauses: 'reps >= 5', 'day in mon,tue', 'note is set'. Ops: = != > >= < <= in. Catalog fields only."
+                  },
+                  "group_by": {
+                    "type": "array",
+                    "maxItems": 2,
+                    "description": "One of dataset, day, week, month, visitor, or \"field:{name}\".",
+                    "items": {
+                      "type": "string",
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "dataset",
+                            "day",
+                            "week",
+                            "month",
+                            "visitor"
+                          ]
+                        },
+                        {
+                          "pattern": "^field:.+$"
+                        }
+                      ]
+                    }
+                  },
+                  "since": {
+                    "type": "string",
+                    "description": "ISO-8601 instant or window (7d, 24h)."
+                  },
+                  "until": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 500
+                  },
+                  "distributions": {
+                    "type": "object",
+                    "description": "One artifact's per-field distributions instead of a scoped query.",
+                    "properties": {
+                      "artifact": {
+                        "type": "string",
+                        "description": "Artifact id or slug."
+                      },
+                      "version": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "group_by": {
+                        "type": "string",
+                        "description": "A choice, boolean or integer field."
+                      },
+                      "bucket": {
+                        "type": "string",
+                        "enum": [
+                          "day",
+                          "week"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "artifact"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Aggregate what was collected: numbers, never rows",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/schema": {
+      "get": {
+        "operationId": "getSchema",
+        "summary": "The data catalog: datasets and content collections, or a comparison",
+        "description": "The data catalog, without rows. Read (the default): `datasets` your artifacts declared, with fields, units, measures and `since`/`deprecated` versions, and this workspace's content `collections`, with fields, rules and entry counts. `compare` (alone): two to ten artifacts' newest fields side by side, every type, unit and measure conflict named. `define` creates a content collection, or replaces the one with that `key` outright, name, display field and every field; a field left out is gone from the model, and a collection an artifact declared is refused with `conflict`. Refusals name field, rule and fix. Rows an artifact collected are super_data.",
+        "tags": [
+          "Data"
+        ],
+        "x-mcp-tool": "super_data_schema",
+        "parameters": [
+          {
+            "name": "series",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tags",
+            "in": "query",
+            "required": false,
+            "description": "All must match.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "artifact",
+            "in": "query",
+            "required": false,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "compare",
+            "in": "query",
+            "required": false,
+            "description": "Alone: 2+ ids or slugs; their fields side by side, conflicts named.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 10
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "description": "ISO-8601 instant or window (7d, 24h).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "description": "Workspace handle. Omit for your own.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The data catalog: datasets and content collections, or a comparison",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "defineCollection",
+        "summary": "Create or replace a content collection",
+        "description": "The data catalog, without rows. Read (the default): `datasets` your artifacts declared, with fields, units, measures and `since`/`deprecated` versions, and this workspace's content `collections`, with fields, rules and entry counts. `compare` (alone): two to ten artifacts' newest fields side by side, every type, unit and measure conflict named. `define` creates a content collection, or replaces the one with that `key` outright, name, display field and every field; a field left out is gone from the model, and a collection an artifact declared is refused with `conflict`. Refusals name field, rule and fix. Rows an artifact collected are super_data.",
+        "tags": [
+          "Collections"
+        ],
+        "x-mcp-tool": "super_data_schema",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "define": {
+                    "type": "object",
+                    "description": "A content collection definition: creates one, or replaces the one with this key.",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "description": "Lowercase letters, digits, underscores; starts with a letter."
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "1–80 chars."
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "displayField": {
+                        "type": "string",
+                        "description": "Labels an entry. Default: first text field."
+                      },
+                      "fields": {
+                        "type": "array",
+                        "maxItems": 60,
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "description": "text long_text rich_text email url phone color integer decimal rating measurement boolean date datetime time choice multi_choice json image video file reference reference_list"
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "required": {
+                              "type": "boolean"
+                            },
+                            "unique": {
+                              "type": "boolean"
+                            },
+                            "pii": {
+                              "type": "string",
+                              "enum": [
+                                "none",
+                                "contact",
+                                "sensitive",
+                                "secret"
+                              ],
+                              "description": "contact: masked for non-owners. sensitive: encrypted, not queryable. secret: write-only."
+                            },
+                            "description": {
+                              "type": "string"
+                            },
+                            "rules": {
+                              "type": "object",
+                              "description": "minLength maxLength pattern; min max precision; scale; measure unit; after before; choices minChoices maxChoices; collection onDelete; maxItems; maxBytes."
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "type",
+                            "pii"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "name",
+                      "fields"
+                    ]
+                  },
+                  "workspace": {
+                    "type": "string",
+                    "description": "Workspace handle. Omit for your own."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Create or replace a content collection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/collections/{collection}/entries": {
+      "get": {
+        "operationId": "listEntries",
+        "summary": "One page of a content collection's entries",
+        "description": "Entries of a workspace content collection (a model defined in the catalog), not rows an artifact collected. With `values`: create one entry (an object) or up to 50 (an array, one outcome per row); values are coerced to declared types, undeclared fields are refused by name, and nothing existing is updated or deleted. Without: read one page, filtered and sorted in the database; references resolve to labels, sensitive fields read as answered-or-not. Rows visitors submitted are super_data.",
+        "tags": [
+          "Collections"
+        ],
+        "x-mcp-tool": "super_entries",
+        "parameters": [
+          {
+            "name": "collection",
+            "in": "path",
+            "required": true,
+            "description": "Content collection key (a content model), not a gallery label.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "description": "Workspace handle. Omit for your own.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "description": "ANDed 'field op value' clauses: 'reps >= 5', 'day in mon,tue', 'note is set'. Ops: = != > >= < <= contains starts has in, is set, is empty. System: _created_at _updated_at _status _author.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 12
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "Case-insensitive, over text fields.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "Field or system column. Default _created_at.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "description": "ETag from the previous authorized read. An unchanged page answers 304; it still spends the read budget.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of a content collection's entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Unchanged authorized page. ETag and Cache-Control: private, no-cache are retained."
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createEntries",
+        "summary": "Create one entry, or a batch",
+        "description": "Entries of a workspace content collection (a model defined in the catalog), not rows an artifact collected. With `values`: create one entry (an object) or up to 50 (an array, one outcome per row); values are coerced to declared types, undeclared fields are refused by name, and nothing existing is updated or deleted. Without: read one page, filtered and sorted in the database; references resolve to labels, sensitive fields read as answered-or-not. Rows visitors submitted are super_data.",
+        "tags": [
+          "Collections"
+        ],
+        "x-mcp-tool": "super_entries",
+        "parameters": [
+          {
+            "name": "collection",
+            "in": "path",
+            "required": true,
+            "description": "Content collection key (a content model), not a gallery label.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "values": {
+                    "type": [
+                      "object",
+                      "array"
+                    ],
+                    "items": {
+                      "type": "object"
+                    },
+                    "description": "Keyed by field name. An array writes a batch."
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "published",
+                      "archived"
+                    ],
+                    "description": "Written entries. Default published."
+                  },
+                  "workspace": {
+                    "type": "string",
+                    "description": "Workspace handle. Omit for your own."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Create one entry, or a batch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/collections/{collection}/entries/{entry}/fields/{field}/use": {
+      "post": {
+        "operationId": "useSecret",
+        "summary": "Call an approved API with a stored secret you cannot read (workspace keys)",
+        "description": "Make one HTTPS request with a `pii: secret` value from a content collection entry. The platform puts the value into one header and calls the one host a person approved; you get status, headers and body, scrubbed of it. You never see it, in input or result; a response echoing it is withheld whole (`secret_echoed`). A first request for a field and host answers `approval_required` with `approvalUrl`: give the person that link, then repeat the request once they approve. Grants expire, cap uses and can be revoked; every use is logged. The person types the secret into its dashboard entry; super_entries writes one only if they insist on pasting it.",
+        "tags": [
+          "Collections"
+        ],
+        "x-mcp-tool": "super_secret_use",
+        "parameters": [
+          {
+            "name": "collection",
+            "in": "path",
+            "required": true,
+            "description": "Content collection key (a content model), not a gallery label.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entry",
+            "in": "path",
+            "required": true,
+            "description": "The entry id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "field",
+            "in": "path",
+            "required": true,
+            "description": "The `pii: secret` field whose value is sent.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "GET",
+                      "POST",
+                      "PUT",
+                      "PATCH",
+                      "DELETE"
+                    ]
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "https only; its host must be the approved one. Redirects are returned, never followed."
+                  },
+                  "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Sent as given, except host, authorization, cookie, proxy-* and the grant’s own header."
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "≤64 KiB."
+                  },
+                  "header": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "e.g. authorization, x-api-key."
+                      },
+                      "scheme": {
+                        "type": "string",
+                        "description": "Prefix before the value, e.g. \"Bearer \". May be empty."
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Where the value goes; asked for when no grant exists. The approved grant’s header wins."
+                  }
+                },
+                "required": [
+                  "method",
+                  "url"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Call an approved API with a stored secret you cannot read (workspace keys)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/templates": {
+      "get": {
+        "operationId": "listTemplates",
+        "summary": "Find, rank or list templates",
+        "description": "With `request`: rank installed templates by content similarity; matches carry `band` (high: build from it; possible: judge it), `why` and unscored stats. `scope: marketplace`: released public templates, ranked by `request` or else the top by `sort`; `sort`, `limit` and the facets apply only here. Neither: the installed list. `slug`: one template in full, with its `installPrompt`; `history`: its changelog; `feedback`: its artifacts' comments as themes. `mine`: your published templates, with counts. Reading only: installing, rating and rolling back are super_template_action.",
+        "tags": [
+          "Templates"
+        ],
+        "x-mcp-tool": "super_templates",
+        "parameters": [
+          {
+            "name": "request",
+            "in": "query",
+            "required": false,
+            "description": "What the person asked for, in their words.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "description": "Default installed.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "installed",
+                "marketplace"
+              ]
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "description": "A label, not a capability.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "page",
+                "slideshow",
+                "survey",
+                "tracker",
+                "video",
+                "tool",
+                "dashboard"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "Default relevance with `request`, else rating.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "relevance",
+                "rating",
+                "uses",
+                "installs",
+                "recent"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Default 5.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            }
+          },
+          {
+            "name": "jobs",
+            "in": "query",
+            "required": false,
+            "description": "Any of.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "track",
+                  "collect",
+                  "present",
+                  "report",
+                  "monitor",
+                  "prove",
+                  "document",
+                  "explain",
+                  "plan",
+                  "decide",
+                  "review",
+                  "learn",
+                  "prototype",
+                  "announce",
+                  "compute",
+                  "curate",
+                  "coordinate",
+                  "play"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "audience",
+            "in": "query",
+            "required": false,
+            "description": "Any of.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "everyone",
+                  "engineering",
+                  "product",
+                  "design",
+                  "marketing",
+                  "sales",
+                  "ops",
+                  "people",
+                  "finance",
+                  "founders",
+                  "education",
+                  "personal",
+                  "community"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "needs",
+            "in": "query",
+            "required": false,
+            "description": "All of. `[\"runtime\"]`: ships code.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "runtime",
+                  "data",
+                  "comments",
+                  "live"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "cost",
+            "in": "query",
+            "required": false,
+            "description": "fill: you send a document; write: you write the page; build: page and policy.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "fill",
+                "write",
+                "build"
+              ]
+            }
+          },
+          {
+            "name": "tier",
+            "in": "query",
+            "required": false,
+            "description": "Marketplace trust tier: Official, Verified or Community.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "official",
+                "verified",
+                "community"
+              ]
+            }
+          },
+          {
+            "name": "mine",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Find, rank or list templates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "saveTemplate",
+        "summary": "Create or revise a template draft",
+        "description": "Write a template draft only you can publish from. Without `expectedVersion` it creates (refused if the slug exists); with it, it revises the head (refused if the head moved past it), and a revision that changes nothing cuts no version. A `json` slot needs `schema`. Runtime `files` (≤512 KiB decoded) need a `json` slot and an index.html with one `<script id=\"sa-template-values\" type=\"application/json\">`. Others build from it only once super_release_template releases it; a revision never changes a released version.",
+        "tags": [
+          "Templates"
+        ],
+        "x-mcp-tool": "super_template_save",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "description": "Kebab-case, 3–64 chars. Permanent."
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "page",
+                      "slideshow",
+                      "survey",
+                      "tracker",
+                      "video",
+                      "tool",
+                      "dashboard"
+                    ],
+                    "description": "`dashboard`: a page that mostly shows live data — a label, not a capability."
+                  },
+                  "jobs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "track",
+                        "collect",
+                        "present",
+                        "report",
+                        "monitor",
+                        "prove",
+                        "document",
+                        "explain",
+                        "plan",
+                        "decide",
+                        "review",
+                        "learn",
+                        "prototype",
+                        "announce",
+                        "compute",
+                        "curate",
+                        "coordinate",
+                        "play"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "description": "What a person hires it for; the first is primary. Create default: from `kind`."
+                  },
+                  "audience": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "everyone",
+                        "engineering",
+                        "product",
+                        "design",
+                        "marketing",
+                        "sales",
+                        "ops",
+                        "people",
+                        "finance",
+                        "founders",
+                        "education",
+                        "personal",
+                        "community"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "description": "1–3, or `everyone` alone (the default)."
+                  },
+                  "useCases": {
+                    "type": "array",
+                    "maxItems": 5,
+                    "description": "Things to build from it; the build prompt draws on them.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "string",
+                          "maxLength": 80
+                        },
+                        "prompt": {
+                          "type": "string",
+                          "maxLength": 280
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "prompt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "installArchetype": {
+                    "type": "string",
+                    "enum": [
+                      "scenarios",
+                      "explainer",
+                      "interview"
+                    ],
+                    "description": "After install: `scenarios` (default) offers three builds; `explainer` builds one from the sample; `interview` asks three questions first."
+                  },
+                  "installAfter": {
+                    "type": "string",
+                    "maxLength": 1500,
+                    "description": "Your note, appended to the build prompt as a suggestion."
+                  },
+                  "samplePublic": {
+                    "type": "boolean",
+                    "description": "The sample may appear on the public listing page."
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "trackers",
+                      "surveys",
+                      "presentations",
+                      "dashboards",
+                      "documents",
+                      "tools",
+                      "games",
+                      "other"
+                    ],
+                    "description": "Deprecated; read as `jobs` when `jobs` is absent."
+                  },
+                  "spec": {
+                    "type": "object",
+                    "description": "`slots`, `declaration` (every instance’s policy), optional `comments`, `keywords` (searched), `examplePrompts`.",
+                    "properties": {
+                      "slots": {
+                        "type": "array",
+                        "description": "The fill schema, an array: [{\"name\": \"headline\", \"type\": \"text\", \"required\": true, \"max\": 120}].",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "type"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "guidance": {
+                    "type": "string",
+                    "description": "Optional notes for whoever fills it."
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "A prompt a person copies to ask for one."
+                  },
+                  "sample": {
+                    "type": "object",
+                    "description": "`{\"values\": {…}}`, rendered in the preview."
+                  },
+                  "demo": {
+                    "type": "string",
+                    "description": "Slug of your artifact to link as the demo (linked once public). \"\" clears it."
+                  },
+                  "files": {
+                    "type": "array",
+                    "description": "Runtime files, `index.html` required. Omitting them on a revision drops the runtime from that new draft version only.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string",
+                          "description": "UTF-8 text, base64-ed for you. Send `text` or `content`."
+                        },
+                        "content": {
+                          "type": "string",
+                          "description": "Base64 of the bytes, for binaries."
+                        },
+                        "contentType": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "companions": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "description": "Extra artifacts each publish makes at {slug}-{role}, same values (e.g. a stage for a host). Bind the primary with `source: {artifact: \"@primary\", streams}`. Released: add, never remove.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "description": "Kebab-case, unique, not \"primary\"."
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "page",
+                            "slideshow",
+                            "survey",
+                            "tracker",
+                            "video",
+                            "tool",
+                            "dashboard"
+                          ]
+                        },
+                        "visibility": {
+                          "type": "string",
+                          "enum": [
+                            "inherit",
+                            "private",
+                            "public"
+                          ],
+                          "description": "Default inherit: the primary’s."
+                        },
+                        "declaration": {
+                          "type": "object",
+                          "description": "This part’s policy, or omit."
+                        },
+                        "slots": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Slot names whose values this part gets. Default all."
+                        },
+                        "files": {
+                          "type": "array",
+                          "description": "Runtime files, `index.html` required. Omitting them on a revision drops the runtime from that new draft version only.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "text": {
+                                "type": "string",
+                                "description": "UTF-8 text, base64-ed for you. Send `text` or `content`."
+                              },
+                              "content": {
+                                "type": "string",
+                                "description": "Base64 of the bytes, for binaries."
+                              },
+                              "contentType": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "role",
+                        "title",
+                        "files"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "The version you revised. Present: revise. Absent: create."
+                  },
+                  "changeNote": {
+                    "type": "string",
+                    "description": "Revisions: one line on why, for the changelog."
+                  }
+                },
+                "required": [
+                  "slug",
+                  "title",
+                  "description",
+                  "spec"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Create or revise a template draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/templates/{slug}": {
+      "get": {
+        "operationId": "getTemplate",
+        "summary": "One template in full, with its install prompt",
+        "description": "With `request`: rank installed templates by content similarity; matches carry `band` (high: build from it; possible: judge it), `why` and unscored stats. `scope: marketplace`: released public templates, ranked by `request` or else the top by `sort`; `sort`, `limit` and the facets apply only here. Neither: the installed list. `slug`: one template in full, with its `installPrompt`; `history`: its changelog; `feedback`: its artifacts' comments as themes. `mine`: your published templates, with counts. Reading only: installing, rating and rolling back are super_template_action.",
+        "tags": [
+          "Templates"
+        ],
+        "x-mcp-tool": "super_templates",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "description": "Default: the released one.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One template in full, with its install prompt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/templates/{slug}/history": {
+      "get": {
+        "operationId": "getTemplateHistory",
+        "summary": "A template's changelog",
+        "description": "With `request`: rank installed templates by content similarity; matches carry `band` (high: build from it; possible: judge it), `why` and unscored stats. `scope: marketplace`: released public templates, ranked by `request` or else the top by `sort`; `sort`, `limit` and the facets apply only here. Neither: the installed list. `slug`: one template in full, with its `installPrompt`; `history`: its changelog; `feedback`: its artifacts' comments as themes. `mine`: your published templates, with counts. Reading only: installing, rating and rolling back are super_template_action.",
+        "tags": [
+          "Templates"
+        ],
+        "x-mcp-tool": "super_templates",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A template's changelog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/templates/{slug}/feedback": {
+      "get": {
+        "operationId": "getTemplateFeedback",
+        "summary": "Comments on a template's artifacts, as themes",
+        "description": "With `request`: rank installed templates by content similarity; matches carry `band` (high: build from it; possible: judge it), `why` and unscored stats. `scope: marketplace`: released public templates, ranked by `request` or else the top by `sort`; `sort`, `limit` and the facets apply only here. Neither: the installed list. `slug`: one template in full, with its `installPrompt`; `history`: its changelog; `feedback`: its artifacts' comments as themes. `mine`: your published templates, with counts. Reading only: installing, rating and rolling back are super_template_action.",
+        "tags": [
+          "Templates"
+        ],
+        "x-mcp-tool": "super_templates",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comments on a template's artifacts, as themes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/templates/{slug}/actions": {
+      "post": {
+        "operationId": "actOnTemplate",
+        "summary": "Install, uninstall, rate, report, roll back or request verification",
+        "description": "Act on one template; nothing here deletes a template, a version or a built artifact. `install`/`uninstall`: this workspace's installed set (uninstall removes only the install; built artifacts keep working); `install` returns its build prompt as `nextStep`. `rate`: the person's 1–5 `stars` on an installed template not yours (`cannot_rate_own`, `not_installed`, `rate_limited`); counts once this workspace built from it. `report`: `kind` and a `reason` (≤1000 chars) for a moderator; one per account; enough reports hide it. `rollback`: restore `version` as a new version, unless the runtime changed. `request_verification`: a moderator checks your released `version`; 3 per 30 days. Finding and reading templates is super_templates.",
+        "tags": [
+          "Templates"
+        ],
+        "x-mcp-tool": "super_template_action",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "install",
+                      "uninstall",
+                      "rate",
+                      "report",
+                      "rollback",
+                      "request_verification"
+                    ]
+                  },
+                  "stars": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "spam",
+                      "harmful",
+                      "broken",
+                      "misleading",
+                      "pii",
+                      "copyright",
+                      "other"
+                    ],
+                    "description": "Report only."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "description": "Report only."
+                  },
+                  "confirmedByPerson": {
+                    "type": "boolean",
+                    "description": "Install only: true once the person agreed to this public template. Never set it unasked (`permission_required`)."
+                  }
+                },
+                "required": [
+                  "action"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Install, uninstall, rate, report, roll back or request verification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/templates/{slug}/release": {
+      "post": {
+        "operationId": "releaseTemplate",
+        "summary": "Release one version of your template",
+        "description": "Release one version of your template so others can build from it, live at once to the reach `visibility` sets; the result names its trust `tier` (Official, Verified or Community). Forward only (`release_moves_backwards`): earlier versions stay, and nothing is deleted. A private demo needs `demoConsent: true`. A runtime, prompt, parts or data change leaves a Verified badge behind. Public: account 7 days old (`publisher_too_new`), 10/day, 3/template/hour (`rate_limited`), 20 templates (`too_many_templates`), no tier words (`reserved_wording`), no credential (`secret_in_template`), paid plan (`plan_required`). Writing the draft is super_template_save.",
+        "tags": [
+          "Templates"
+        ],
+        "x-mcp-tool": "super_release_template",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "public",
+                      "unlisted",
+                      "workspace"
+                    ],
+                    "description": "`unlisted` (default): by slug. `public`: marketplace. `workspace`: team shelf, members only."
+                  },
+                  "demoConsent": {
+                    "type": "boolean",
+                    "description": "Default false. Makes the demo artifact, and its data, public."
+                  },
+                  "sampleConsent": {
+                    "type": "boolean",
+                    "description": "true: show the sample on the public listing. Omit: unchanged."
+                  }
+                },
+                "required": [
+                  "version"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Release one version of your template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/projects": {
+      "get": {
+        "operationId": "listProjects",
+        "summary": "Your projects",
+        "description": "A project is an ordered set of your artifacts shown one at a time at /s/{slug}, with its own audience and share list. No `project`: `title` creates one (seeded from `artifacts`), else list yours. With `project`: add `artifacts`, `remove` one, `title` renames, set `visibility`, `order`/`move` reorder, a `rule` adds matches as they are published, or read it. `delete` with `confirm: true` removes the project, its order and its share list permanently; its artifacts stay. One change per call, or title with visibility. An artifact's gallery label is not a project: that is `collection` on super_artifact_set.",
+        "tags": [
+          "Projects"
+        ],
+        "x-mcp-tool": "super_project",
+        "parameters": [
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "description": "Workspace handle. Omit for your own.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Your projects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createProject",
+        "summary": "Create a project, optionally seeded with artifacts",
+        "description": "A project is an ordered set of your artifacts shown one at a time at /s/{slug}, with its own audience and share list. No `project`: `title` creates one (seeded from `artifacts`), else list yours. With `project`: add `artifacts`, `remove` one, `title` renames, set `visibility`, `order`/`move` reorder, a `rule` adds matches as they are published, or read it. `delete` with `confirm: true` removes the project, its order and its share list permanently; its artifacts stay. One change per call, or title with visibility. An artifact's gallery label is not a project: that is `collection` on super_artifact_set.",
+        "tags": [
+          "Projects"
+        ],
+        "x-mcp-tool": "super_project",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "≤ 120 chars."
+                  },
+                  "artifacts": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Artifact ids or slugs, in order."
+                  },
+                  "groupLabel": {
+                    "type": "string",
+                    "description": "Heading over these artifacts."
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "private",
+                      "organization",
+                      "public"
+                    ],
+                    "description": "organization: anyone at the workspace. Widening over private needs confirm."
+                  },
+                  "rule": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "description": "See super_help projects. null: manual."
+                  },
+                  "confirm": {
+                    "type": "boolean",
+                    "description": "Needed to delete; also to add a private artifact to a shared project, or widen one holding private ones (`confirm_private`)."
+                  },
+                  "workspace": {
+                    "type": "string",
+                    "description": "Workspace handle. Omit for your own."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Create a project, optionally seeded with artifacts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/projects/{project}": {
+      "get": {
+        "operationId": "getProject",
+        "summary": "One project and its items",
+        "description": "A project is an ordered set of your artifacts shown one at a time at /s/{slug}, with its own audience and share list. No `project`: `title` creates one (seeded from `artifacts`), else list yours. With `project`: add `artifacts`, `remove` one, `title` renames, set `visibility`, `order`/`move` reorder, a `rule` adds matches as they are published, or read it. `delete` with `confirm: true` removes the project, its order and its share list permanently; its artifacts stay. One change per call, or title with visibility. An artifact's gallery label is not a project: that is `collection` on super_artifact_set.",
+        "tags": [
+          "Projects"
+        ],
+        "x-mcp-tool": "super_project",
+        "parameters": [
+          {
+            "name": "project",
+            "in": "path",
+            "required": true,
+            "description": "Project id, slug or exact title.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "description": "Workspace handle. Omit for your own.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One project and its items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateProject",
+        "summary": "Rename, set visibility, reorder, move, fold groups or set a rule",
+        "description": "A project is an ordered set of your artifacts shown one at a time at /s/{slug}, with its own audience and share list. No `project`: `title` creates one (seeded from `artifacts`), else list yours. With `project`: add `artifacts`, `remove` one, `title` renames, set `visibility`, `order`/`move` reorder, a `rule` adds matches as they are published, or read it. `delete` with `confirm: true` removes the project, its order and its share list permanently; its artifacts stay. One change per call, or title with visibility. An artifact's gallery label is not a project: that is `collection` on super_artifact_set.",
+        "tags": [
+          "Projects"
+        ],
+        "x-mcp-tool": "super_project",
+        "parameters": [
+          {
+            "name": "project",
+            "in": "path",
+            "required": true,
+            "description": "Project id, slug or exact title.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "≤ 120 chars."
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "private",
+                      "organization",
+                      "public"
+                    ],
+                    "description": "organization: anyone at the workspace. Widening over private needs confirm."
+                  },
+                  "order": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Every item once, in order: ids or slugs."
+                  },
+                  "move": {
+                    "type": "object",
+                    "properties": {
+                      "artifact": {
+                        "type": "string",
+                        "description": "An artifact id or slug, or an item id."
+                      },
+                      "to": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "New position; 1 is first."
+                      }
+                    },
+                    "required": [
+                      "artifact",
+                      "to"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "rule": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "description": "See super_help projects. null: manual."
+                  },
+                  "collapsedGroups": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "groupLabels shown folded. Whole set."
+                  },
+                  "confirm": {
+                    "type": "boolean",
+                    "description": "Needed to delete; also to add a private artifact to a shared project, or widen one holding private ones (`confirm_private`)."
+                  },
+                  "workspace": {
+                    "type": "string",
+                    "description": "Workspace handle. Omit for your own."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rename, set visibility, reorder, move, fold groups or set a rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteProject",
+        "summary": "Delete a project; its artifacts stay",
+        "description": "A project is an ordered set of your artifacts shown one at a time at /s/{slug}, with its own audience and share list. No `project`: `title` creates one (seeded from `artifacts`), else list yours. With `project`: add `artifacts`, `remove` one, `title` renames, set `visibility`, `order`/`move` reorder, a `rule` adds matches as they are published, or read it. `delete` with `confirm: true` removes the project, its order and its share list permanently; its artifacts stay. One change per call, or title with visibility. An artifact's gallery label is not a project: that is `collection` on super_artifact_set.",
+        "tags": [
+          "Projects"
+        ],
+        "x-mcp-tool": "super_project",
+        "parameters": [
+          {
+            "name": "project",
+            "in": "path",
+            "required": true,
+            "description": "Project id, slug or exact title.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "confirm",
+            "in": "query",
+            "required": true,
+            "description": "Repeat the project: deleting is permanent.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delete a project; its artifacts stay",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/projects/{project}/artifacts": {
+      "post": {
+        "operationId": "addProjectArtifacts",
+        "summary": "Add artifacts to a project",
+        "description": "A project is an ordered set of your artifacts shown one at a time at /s/{slug}, with its own audience and share list. No `project`: `title` creates one (seeded from `artifacts`), else list yours. With `project`: add `artifacts`, `remove` one, `title` renames, set `visibility`, `order`/`move` reorder, a `rule` adds matches as they are published, or read it. `delete` with `confirm: true` removes the project, its order and its share list permanently; its artifacts stay. One change per call, or title with visibility. An artifact's gallery label is not a project: that is `collection` on super_artifact_set.",
+        "tags": [
+          "Projects"
+        ],
+        "x-mcp-tool": "super_project",
+        "parameters": [
+          {
+            "name": "project",
+            "in": "path",
+            "required": true,
+            "description": "Project id, slug or exact title.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "artifacts": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Artifact ids or slugs, in order."
+                  },
+                  "groupLabel": {
+                    "type": "string",
+                    "description": "Heading over these artifacts."
+                  },
+                  "confirm": {
+                    "type": "boolean",
+                    "description": "Needed to delete; also to add a private artifact to a shared project, or widen one holding private ones (`confirm_private`)."
+                  },
+                  "workspace": {
+                    "type": "string",
+                    "description": "Workspace handle. Omit for your own."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Add artifacts to a project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/projects/{project}/artifacts/{remove}": {
+      "delete": {
+        "operationId": "removeProjectArtifact",
+        "summary": "Remove one artifact (or item) from a project",
+        "description": "A project is an ordered set of your artifacts shown one at a time at /s/{slug}, with its own audience and share list. No `project`: `title` creates one (seeded from `artifacts`), else list yours. With `project`: add `artifacts`, `remove` one, `title` renames, set `visibility`, `order`/`move` reorder, a `rule` adds matches as they are published, or read it. `delete` with `confirm: true` removes the project, its order and its share list permanently; its artifacts stay. One change per call, or title with visibility. An artifact's gallery label is not a project: that is `collection` on super_artifact_set.",
+        "tags": [
+          "Projects"
+        ],
+        "x-mcp-tool": "super_project",
+        "parameters": [
+          {
+            "name": "project",
+            "in": "path",
+            "required": true,
+            "description": "Project id, slug or exact title.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "remove",
+            "in": "path",
+            "required": true,
+            "description": "An artifact id or slug, or an item id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Remove one artifact (or item) from a project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/artifacts/{artifact}/shares": {
+      "post": {
+        "operationId": "shareArtifact",
+        "summary": "Give named people access to an artifact",
+        "description": "Give access: `artifact` (viewer; commenter comments; editor edits; new addresses emailed), `project` (viewer; emails each address); `workspace` (editor; accept links, no email). Named people move to the sent role, including downgrades; nobody is removed. Never changes visibility: public stays public; restrict with super_artifact_set. At most 20 addresses for an artifact, 50 for a project or workspace.",
+        "tags": [
+          "Sharing"
+        ],
+        "x-mcp-tool": "super_share",
+        "x-rate-limit-class": "email",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "emails": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "maxItems": 50
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "viewer",
+                      "commenter",
+                      "editor"
+                    ],
+                    "description": "Default viewer; editor for a workspace. An editor's key restores (super_artifact_set version), writes (super_data_write), publishes by slug in its workspace."
+                  },
+                  "artifactOnly": {
+                    "type": "boolean",
+                    "description": "Skip the team invite."
+                  }
+                },
+                "required": [
+                  "emails"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Give named people access to an artifact",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/projects/{project}/shares": {
+      "post": {
+        "operationId": "shareProject",
+        "summary": "Give named people access to a project",
+        "description": "Give access: `artifact` (viewer; commenter comments; editor edits; new addresses emailed), `project` (viewer; emails each address); `workspace` (editor; accept links, no email). Named people move to the sent role, including downgrades; nobody is removed. Never changes visibility: public stays public; restrict with super_artifact_set. At most 20 addresses for an artifact, 50 for a project or workspace.",
+        "tags": [
+          "Sharing"
+        ],
+        "x-mcp-tool": "super_share",
+        "x-rate-limit-class": "email",
+        "parameters": [
+          {
+            "name": "project",
+            "in": "path",
+            "required": true,
+            "description": "Project id, slug or exact title.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "emails": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "maxItems": 50
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "viewer",
+                      "commenter",
+                      "editor"
+                    ],
+                    "description": "Default viewer; editor for a workspace. An editor's key restores (super_artifact_set version), writes (super_data_write), publishes by slug in its workspace."
+                  },
+                  "confirm": {
+                    "type": "boolean",
+                    "description": "Project only: true shares a project that holds private artifacts (`confirm_private`)."
+                  }
+                },
+                "required": [
+                  "emails"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Give named people access to a project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspace/shares": {
+      "post": {
+        "operationId": "shareWorkspace",
+        "summary": "Invite editors to a workspace (returns accept links)",
+        "description": "Give access: `artifact` (viewer; commenter comments; editor edits; new addresses emailed), `project` (viewer; emails each address); `workspace` (editor; accept links, no email). Named people move to the sent role, including downgrades; nobody is removed. Never changes visibility: public stays public; restrict with super_artifact_set. At most 20 addresses for an artifact, 50 for a project or workspace.",
+        "tags": [
+          "Sharing"
+        ],
+        "x-mcp-tool": "super_share",
+        "x-rate-limit-class": "email",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "emails": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "maxItems": 50
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "viewer",
+                      "commenter",
+                      "editor"
+                    ],
+                    "description": "Default viewer; editor for a workspace. An editor's key restores (super_artifact_set version), writes (super_data_write), publishes by slug in its workspace."
+                  },
+                  "workspace": {
+                    "type": "string",
+                    "description": "A handle you administer, or \"\" for your own."
+                  }
+                },
+                "required": [
+                  "emails"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invite editors to a workspace (returns accept links)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/artifacts/{artifact}/comments": {
+      "get": {
+        "operationId": "listComments",
+        "summary": "Comment threads on an artifact, newest first",
+        "description": "Threads: messages, anchor, viewed version (default `status: \"open\"`); status all includes resolved history. Publish the fix first, then respond with body explaining what changed and which version, plus resolve: true atomically. Reuse messageId on retry. Reports replied/resolved separately. resolve: false reopens. `screenshot` returns an image. Agents cannot open/delete threads. mentioned: true lists your @mentions, oldest unseen first, marking them seen.",
+        "tags": [
+          "Comments"
+        ],
+        "x-mcp-tool": "super_comments",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "open",
+                "resolved"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "A path inside the artifact, e.g. \"/pricing\". Not pagination.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "The previous cursor.next.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comment threads on an artifact, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/artifacts/{artifact}/comments/responses": {
+      "post": {
+        "operationId": "respondToComments",
+        "summary": "Reply to and/or resolve threads, one outcome each",
+        "description": "Threads: messages, anchor, viewed version (default `status: \"open\"`); status all includes resolved history. Publish the fix first, then respond with body explaining what changed and which version, plus resolve: true atomically. Reuse messageId on retry. Reports replied/resolved separately. resolve: false reopens. `screenshot` returns an image. Agents cannot open/delete threads. mentioned: true lists your @mentions, oldest unseen first, marking them seen.",
+        "tags": [
+          "Comments"
+        ],
+        "x-mcp-tool": "super_comments",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "respond": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "thread": {
+                          "type": "string",
+                          "description": "Thread id, not a message id."
+                        },
+                        "body": {
+                          "type": "string",
+                          "description": "Explain the outcome and published version."
+                        },
+                        "messageId": {
+                          "type": "string",
+                          "description": "UUID reused on retry."
+                        },
+                        "resolve": {
+                          "type": "boolean",
+                          "description": "true resolves, false reopens."
+                        }
+                      },
+                      "required": [
+                        "thread"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reply to and/or resolve threads, one outcome each",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/artifacts/{artifact}/comments/reactions": {
+      "post": {
+        "operationId": "reactToComments",
+        "summary": "Toggle reactions on comment messages",
+        "description": "Threads: messages, anchor, viewed version (default `status: \"open\"`); status all includes resolved history. Publish the fix first, then respond with body explaining what changed and which version, plus resolve: true atomically. Reuse messageId on retry. Reports replied/resolved separately. resolve: false reopens. `screenshot` returns an image. Agents cannot open/delete threads. mentioned: true lists your @mentions, oldest unseen first, marking them seen.",
+        "tags": [
+          "Comments"
+        ],
+        "x-mcp-tool": "super_comments",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "react": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "thread": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "emoji": {
+                          "type": "string"
+                        },
+                        "on": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "thread",
+                        "message",
+                        "emoji"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Toggle reactions on comment messages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/artifacts/{artifact}/comments/resolutions": {
+      "post": {
+        "operationId": "resolveComments",
+        "summary": "Resolve mentioned comment threads",
+        "description": "Threads: messages, anchor, viewed version (default `status: \"open\"`); status all includes resolved history. Publish the fix first, then respond with body explaining what changed and which version, plus resolve: true atomically. Reuse messageId on retry. Reports replied/resolved separately. resolve: false reopens. `screenshot` returns an image. Agents cannot open/delete threads. mentioned: true lists your @mentions, oldest unseen first, marking them seen.",
+        "tags": [
+          "Comments"
+        ],
+        "x-mcp-tool": "super_comments",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "resolve": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resolve mentioned comment threads",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/artifacts/{artifact}/comments/screenshots/{screenshot}": {
+      "get": {
+        "operationId": "getCommentScreenshot",
+        "summary": "One message's screenshot, base64 in `image`",
+        "description": "Threads: messages, anchor, viewed version (default `status: \"open\"`); status all includes resolved history. Publish the fix first, then respond with body explaining what changed and which version, plus resolve: true atomically. Reuse messageId on retry. Reports replied/resolved separately. resolve: false reopens. `screenshot` returns an image. Agents cannot open/delete threads. mentioned: true lists your @mentions, oldest unseen first, marking them seen.",
+        "tags": [
+          "Comments"
+        ],
+        "x-mcp-tool": "super_comments",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "screenshot",
+            "in": "path",
+            "required": true,
+            "description": "A message id, not a thread id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One message's screenshot, base64 in `image`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/mentions": {
+      "get": {
+        "operationId": "listMentions",
+        "summary": "Where people @mentioned you; listing marks them seen",
+        "description": "Threads: messages, anchor, viewed version (default `status: \"open\"`); status all includes resolved history. Publish the fix first, then respond with body explaining what changed and which version, plus resolve: true atomically. Reuse messageId on retry. Reports replied/resolved separately. resolve: false reopens. `screenshot` returns an image. Agents cannot open/delete threads. mentioned: true lists your @mentions, oldest unseen first, marking them seen.",
+        "tags": [
+          "Comments"
+        ],
+        "x-mcp-tool": "super_comments",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "query",
+            "required": false,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "The previous cursor.next.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Where people @mentioned you; listing marks them seen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/signatures": {
+      "get": {
+        "operationId": "listSignatureRequests",
+        "summary": "An artifact's signature requests, newest first",
+        "description": "Ask named people to sign one published version of an artifact, and follow the request. `request` with `artifact`, `signers` [{name, email, party?}] (≤10) and an optional `message` (≤500 characters) emails each signer a private link; the version must be one file of at most 2 MiB, and it is kept while the request is open and for good once it completes. `status` with `request` (one) or `artifact` (all, newest first). `withdraw` closes an open request. `remind` emails `signer` the link again, three times at most, a day apart. Only each signer can sign, in a browser, after a code sent to their address: an agent cannot.",
+        "tags": [
+          "Signatures"
+        ],
+        "x-mcp-tool": "super_signatures",
+        "parameters": [
+          {
+            "name": "artifact",
+            "in": "query",
+            "required": false,
+            "description": "Artifact id or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "An artifact's signature requests, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "requestSignatures",
+        "summary": "Ask named people to sign one version of an artifact",
+        "description": "Ask named people to sign one published version of an artifact, and follow the request. `request` with `artifact`, `signers` [{name, email, party?}] (≤10) and an optional `message` (≤500 characters) emails each signer a private link; the version must be one file of at most 2 MiB, and it is kept while the request is open and for good once it completes. `status` with `request` (one) or `artifact` (all, newest first). `withdraw` closes an open request. `remind` emails `signer` the link again, three times at most, a day apart. Only each signer can sign, in a browser, after a code sent to their address: an agent cannot.",
+        "tags": [
+          "Signatures"
+        ],
+        "x-mcp-tool": "super_signatures",
+        "x-rate-limit-class": "email",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "artifact": {
+                    "type": "string",
+                    "description": "Artifact id or slug."
+                  },
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "The version to sign. Default: the published one."
+                  },
+                  "signers": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "party": {
+                          "type": "string",
+                          "description": "Their role in the agreement, e.g. \"Tenant\"."
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "email"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "message": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "A note shown to every signer."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ask named people to sign one version of an artifact",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/signatures/{request}": {
+      "get": {
+        "operationId": "getSignatureRequest",
+        "summary": "One signature request and its signers",
+        "description": "Ask named people to sign one published version of an artifact, and follow the request. `request` with `artifact`, `signers` [{name, email, party?}] (≤10) and an optional `message` (≤500 characters) emails each signer a private link; the version must be one file of at most 2 MiB, and it is kept while the request is open and for good once it completes. `status` with `request` (one) or `artifact` (all, newest first). `withdraw` closes an open request. `remind` emails `signer` the link again, three times at most, a day apart. Only each signer can sign, in a browser, after a code sent to their address: an agent cannot.",
+        "tags": [
+          "Signatures"
+        ],
+        "x-mcp-tool": "super_signatures",
+        "parameters": [
+          {
+            "name": "request",
+            "in": "path",
+            "required": true,
+            "description": "A signature request id, from request or status.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One signature request and its signers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/signatures/{request}/remind": {
+      "post": {
+        "operationId": "remindSigner",
+        "summary": "Email a signer their link again",
+        "description": "Ask named people to sign one published version of an artifact, and follow the request. `request` with `artifact`, `signers` [{name, email, party?}] (≤10) and an optional `message` (≤500 characters) emails each signer a private link; the version must be one file of at most 2 MiB, and it is kept while the request is open and for good once it completes. `status` with `request` (one) or `artifact` (all, newest first). `withdraw` closes an open request. `remind` emails `signer` the link again, three times at most, a day apart. Only each signer can sign, in a browser, after a code sent to their address: an agent cannot.",
+        "tags": [
+          "Signatures"
+        ],
+        "x-mcp-tool": "super_signatures",
+        "x-rate-limit-class": "email",
+        "parameters": [
+          {
+            "name": "request",
+            "in": "path",
+            "required": true,
+            "description": "A signature request id, from request or status.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "signer": {
+                    "type": "string",
+                    "description": "A signer id, from status. For remind."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email a signer their link again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/signatures/{request}/withdraw": {
+      "post": {
+        "operationId": "withdrawSignatureRequest",
+        "summary": "Close an open signature request",
+        "description": "Ask named people to sign one published version of an artifact, and follow the request. `request` with `artifact`, `signers` [{name, email, party?}] (≤10) and an optional `message` (≤500 characters) emails each signer a private link; the version must be one file of at most 2 MiB, and it is kept while the request is open and for good once it completes. `status` with `request` (one) or `artifact` (all, newest first). `withdraw` closes an open request. `remind` emails `signer` the link again, three times at most, a day apart. Only each signer can sign, in a browser, after a code sent to their address: an agent cannot.",
+        "tags": [
+          "Signatures"
+        ],
+        "x-mcp-tool": "super_signatures",
+        "parameters": [
+          {
+            "name": "request",
+            "in": "path",
+            "required": true,
+            "description": "A signature request id, from request or status.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Close an open signature request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PlanRequired"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "An account key (sa_…) from the API keys page. A read-only key is refused on writes with `scope_required`."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Stable, machine-readable."
+              },
+              "message": {
+                "type": "string",
+                "description": "For a person."
+              },
+              "fix": {
+                "type": "string"
+              },
+              "retryAfterSeconds": {
+                "type": "integer"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "responses": {
+      "PlanRequired": {
+        "description": "plan_required: The REST API and SDKs need a Solo plan or higher. MCP and skills are unaffected.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error": {
+        "description": "A refusal. 400 invalid arguments, 401 no or bad key, 402 plan limit, 403 forbidden or read-only key, 404 not found, 409 conflict, 413 body over 1 MiB, 429 rate limited (see Retry-After).",
+        "headers": {
+          "Retry-After": {
+            "description": "On 429: seconds to wait.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}
